@@ -1,6 +1,6 @@
 # Simple Item Market
 
-I ran the node from rell web ide. To use it, please run a node with the rell code and paste the blockchain RID and url to .env file.
+I ran the node from rell web ide. To use the rell code, you should run a node, for example  at https://try.chromia.dev/ by importing the market3.zip to there or run it on eclipse and then paste the blockchain RID and url to .env file.
 
 # Start React App
 
