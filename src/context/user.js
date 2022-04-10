@@ -1,30 +1,32 @@
-import React, { useState, useEffect, useCallback } from 'react'
-import { getUserByPubKey } from '../useBlockchain';
+import React, { useState, useEffect, useCallback } from "react";
+import { getUserByPubKey } from "../useBlockchain";
+import { retrieveKeyPairFromStorage } from "../utils/keypairTools";
 
+export const UserContext = React.createContext({
+  user: { pubKey: new Uint8Array(0), privKey: new Uint8Array(0) },
+  setUser: React.Dispatch,
+});
 
+export const UserContextProvider = ({ children }) => {
+  const [user, setUser] = useState({
+    pubKey: new Uint8Array(0),
+    privKey: new Uint8Array(0),
+  });
 
-export const UserContext= React.createContext({user: {pubKey: new Uint8Array(0), privKey: new Uint8Array(0)}, setUser : React.Dispatch})
-
-export const UserContextProvider = ( { children } ) => {
-
-    const [user,setUser]=useState();
-    const [registered,setRegistered]=useState(false);
-
-     useEffect(()=> {
-        const str=window.localStorage.getItem("pubKey")
-        if(str){
-        const retrievedArr = JSON.parse(str);
-const pubKey = new Uint8Array(retrievedArr);
-console.log(pubKey.byteLength);
-
-const str2=window.localStorage.getItem("privKey");
-const retrievedArr2 = JSON.parse(str2);
-const privKey = new Uint8Array(retrievedArr2);
-console.log(privKey.byteLength);
-let user= { pubKey: pubKey, privKey: privKey}
-        setUser(user);
+  // Checking localStorage onMount to see if the user logged-in and saving it to context
+  useEffect(() => {
+    const pub = window.localStorage.getItem("pubKey");
+    const priv = window.localStorage.getItem("privKey");
+    if (pub && priv) {
+      const [pubKey, privKey] = retrieveKeyPairFromStorage(pub, priv);
+      let user = { pubKey: pubKey, privKey: privKey };
+      setUser(user);
     }
-     },[])
+  }, []);
 
-     return <UserContext.Provider value={[user,setUser]}>{children}</UserContext.Provider>
-}
+  return (
+    <UserContext.Provider value={[user, setUser]}>
+      {children}
+    </UserContext.Provider>
+  );
+};

@@ -1,105 +1,118 @@
-import React, { useCallback, useEffect, useState, useContext} from 'react';
-import {createTestItem, getItemsByOwner, getAllItems, init, getUserByPubKey, registerUser} from "../useBlockchain";
-import {ItemCard} from "../components/Cards/ItemCard";
-import { Button, Card } from 'react-bootstrap';
-import { UserContext } from '../context/user';
-
+import React, { useCallback, useEffect, useState, useContext } from "react";
+import {
+  createTestItem,
+  getAllItems,
+  getUserByPubKey,
+  registerUser,
+} from "../useBlockchain";
+import { ItemCard } from "../components/Cards/ItemCard";
+import { Button, Card } from "react-bootstrap";
+import { UserContext } from "../context/user";
+import toast, { Toaster } from "react-hot-toast";
 export const Items = () => {
-const [nftList,setNftList]=useState(undefined);
+  const [nftList, setNftList] = useState(undefined);
 
-const [user,setUser]=useContext(UserContext);
+  const [user, setUser] = useContext(UserContext);
 
-const [isUser,setIsUser]=useState(false);
+  const [isUser, setIsUser] = useState(false);
 
-useEffect(async ()=>{
-    try{
-        if(user){
-    const registered_user=await getUserByPubKey(user);
-        if(registered_user){
-            setIsUser(true);
+  useEffect(async () => {
+    try {
+      if (user) {
+        const registered_user = await getUserByPubKey(user);
+        if (registered_user) {
+          setIsUser(true);
         }
 
         getItems();
+      }
+    } catch (e) {
+      console.log(e);
     }
-}
-    catch(e){
-    console.log(e)
-    }
-},[user])
+  }, [user]);
 
-const getItems= useCallback(() => {
-    
-        getAllItems().then((items)=> {
-        console.log("Items: ",items);
-        if(items.length>0){
-        setNftList(items);
-    }
-    
-      }).catch((e)=> console.log(e));
-    
-},[]);
-
-const handleRefresh= e => {
-e.preventDefault()
-try {
-    getItems();
-
-} catch (error) {
-    console.log(error)
-}
-}
-
-const handleInit= e => {
-    e.preventDefault()
-       
-        init(user).then( (res) => {console.log("success, Result: ",res);getItems();}).catch((e)=> console.log("Error is : ",e))
-    
-    }
-    const handleCreateTestItem= e => {
-        e.preventDefault()
-           
-            createTestItem(user).then( (res) => {console.log("success, Result: ",res);getItems();} ).catch((e)=> console.log("Error is : ",e))
-        
+  const getItems = useCallback(() => {
+    getAllItems()
+      .then((items) => {
+        if (items.length > 0) {
+          setNftList(items);
         }
+      })
+      .catch((e) => console.log(e));
+  }, []);
 
-        const handleRegister= e => {
-            e.preventDefault()
-               
-                registerUser(user,"testUser").then( (res) => {console.log("success, Result: ",res);window.location.reload(false);} ).catch((e)=> console.log("Error is : ",e))
-            
-            }
+  const handleRefresh = (e) => {
+    e.preventDefault();
+    try {
+      getItems();
+    } catch (error) {
+      console.log(error);
+    }
+  };
 
-return(     <div>
+  const handleCreateTestItem = (e) => {
+    e.preventDefault();
 
-    { !isUser ?
-    <Button variant='warning' className='p-3 m-3' onClick={handleRegister}>Welcome! Please Press HERE to Register as a user</Button>
-        :
+    toast.promise(createTestItem(user), {
+      loading: "Creating the item...",
+      success: () => {
+        toast.success("Item successfully created");
+        getItems();
+      },
+      error: (error) => {
+        toast.error("Failed to Create");
+        console.log(error);
+      },
+    });
+  };
 
+  const handleRegister = (e) => {
+    e.preventDefault();
+
+    toast.promise(registerUser(user), {
+      loading: "Registering...",
+      success: () => {
+        toast.success("You have successfully registered");
+        window.location.reload(false);
+      },
+      error: (error) => {
+        toast.error("Failed to Register");
+        console.log(error);
+      },
+    });
+  };
+
+  return (
     <div>
-    {
-   user && nftList && 
-     nftList.map((item,index) =>
-      <ItemCard key={index} item={item} user={user} handleAction={() => getItems()} />
-)}
-   
 
-   
+      {!isUser ? (
+        <Button variant="warning" className="p-3 m-3" onClick={handleRegister}>
+          Welcome! Please Press HERE to Register as a user
+        </Button>
+      ) : (
+        <div>
+          {user &&
+            nftList &&
+            nftList.map((item, index) => (
+              <ItemCard
+                key={index}
+                item={item}
+                user={user}
+                handleAction={getItems}
+              />
+            ))}
 
-<p>
-    You can create a test item!!
-</p>
+          <p>You can create a test item!!</p>
 
-{ isUser ?
-<Button variant='warning' className='p-3 m-3' onClick={handleCreateTestItem}>Press HERE you are a registered user to Create a Test Item</Button>
-:
-<Button variant='warning' className='p-3 m-3' onClick={handleInit}>Press HERE to Create a Test Item</Button>
-
-}
-<Button variant='warning' className='p-3 m-3' onClick={handleRefresh}>Press HERE to Refresh The Test Items</Button>
-</div>
-}
-</div>
-)
-
-
-}
+          <Button
+            variant="warning"
+            className="p-3 m-3"
+            onClick={handleCreateTestItem}
+          >
+            Create a Test Item
+          </Button>
+        </div>
+      )}
+    </div>
+  );
+};

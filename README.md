@@ -3,8 +3,9 @@
 I ran the node from rell web ide. To use the rell code, you should run a node, for example  at https://try.chromia.dev/ by importing the market3.zip to there or run it on eclipse and then paste the blockchain RID and url to .env file.
 
 # Start React App
-
-yarn start or npm start
+1 -> clone this repository or launch vs code on github web
+2 -> change .env file for the current running node with the respected rell code.
+3 -> yarn start or npm start
 
 # Login
 

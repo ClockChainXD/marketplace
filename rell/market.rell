@@ -19,9 +19,10 @@ entity balance {
   	mutable amount: integer;
 }
 
-operation init (buyer_pubkey: pubkey) {
-  	val buyer1= create user (buyer_pubkey, "buyer");
-  	create balance (buyer1, 1000000);
+operation register_user(user_pubkey: pubkey){
+  val new_user=create user (user_pubkey,"Test User #<%d>".format((user@*{}).size()));
+  create balance (new_user, 1000000);
+
 }
 
 operation create_test_item(seller_pubkey: pubkey){
@@ -38,11 +39,7 @@ operation sell_item(seller_pubkey: pubkey, sale_price: integer, item_id: rowid){
 
 }
 
-operation register_user(user_pubkey: pubkey, user_name: text){
-  val new_user=create user (user_pubkey, user_name);
-  create balance (new_user, 1000000);
 
-}
 
 
  operation buy(buyer_pubkey: pubkey, item_id: rowid) {
