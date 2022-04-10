@@ -1,4 +1,5 @@
 
+
 entity user {
   key pubkey;
    username: text;
@@ -19,11 +20,6 @@ entity balance {
   	mutable amount: integer;
 }
 
-operation register_user(user_pubkey: pubkey){
-  val new_user=create user (user_pubkey,"Test User #<%d>".format((user@*{}).size()));
-  create balance (new_user, 1000000);
-
-}
 
 operation create_test_item(seller_pubkey: pubkey){
     require( is_signer(seller_pubkey)) ;
@@ -39,7 +35,11 @@ operation sell_item(seller_pubkey: pubkey, sale_price: integer, item_id: rowid){
 
 }
 
+operation register_user(user_pubkey: pubkey){
+  val new_user=create user (user_pubkey, "Test User #<%d>".format((user@*{}).size()));
+  create balance (new_user, 1000000);
 
+}
 
 
  operation buy(buyer_pubkey: pubkey, item_id: rowid) {
