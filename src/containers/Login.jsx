@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useContext } from "react";
-import { useNavigate } from "react-router-dom";
+import { useHref, useNavigate } from "react-router-dom";
 
 import { Form, Button } from "react-bootstrap";
 import { makeKeyPair } from "../useBlockchain";
@@ -9,7 +9,7 @@ import { UserContext } from "../context/user";
 import { convertKeyPairToProperString } from "../utils/keypairTools";
 
 export const Login = () => {
-  let navigate = useNavigate();
+  let itemsURL = useHref("../items");
   const [user, setUser] = useContext(UserContext);
 
   const onFormSubmit = (e) => {
@@ -34,7 +34,8 @@ export const Login = () => {
 
     setUser(keyPair);
 
-    navigate("../items", { replace: true });
+    window.location.replace(itemsURL);
+
   };
 
   return (

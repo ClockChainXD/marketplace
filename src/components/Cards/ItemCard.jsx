@@ -20,12 +20,12 @@ export const ItemCard = ({item, user, handleAction}) => {
   const handleBuy = (e) => {
     e.preventDefault();
 
-    buy(user, item.id)
-      .then((res) => {
-        handleAction();
-        toast.success("You successfully bought");
-      })
-      .catch((e) => console.log("Error is : ", e));
+    toast.promise(buy(user, item.id),{ loading: "Buying the item ",
+    success: () => {
+      handleAction();
+      toast.success("You successfully bought");
+    },
+    error: "Failed to put it sale"})
   };
   return (
     <Card style={{ width: "18rem" }} className="d-inline-block p-2">
