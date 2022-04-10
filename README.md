@@ -17,8 +17,10 @@ Login screen has two options.
 
 # Items
 
+## Register
 You will see the register button first if your pubkey not registered as user to the chain.
 
+## Create Test Item
 Then You can press the create test item button to create a template item for the test.
 
 When it is created, you can sell it. The item is written as a template because the main functionality is to put it to sale and buy it.
