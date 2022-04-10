@@ -1,0 +1,96 @@
+
+entity user {
+  key pubkey;
+   username: text;
+}
+
+
+entity item{
+ name: text;
+ creator: user;
+ mutable owner: user;
+ mutable on_sale: boolean;
+ mutable price: integer;
+ tokenURI: text;
+ }
+
+entity balance {
+  	key user;
+  	mutable amount: integer;
+}
+
+operation init (buyer_pubkey: pubkey) {
+  	val buyer1= create user (buyer_pubkey, "buyer");
+  	create balance (buyer1, 1000000);
+}
+
+operation create_test_item(seller_pubkey: pubkey){
+    require( is_signer(seller_pubkey)) ;
+	val seller=user@{seller_pubkey};
+ 	create item (name="Test Item #<%d>".format((item@*{}).size()),creator=seller,owner=seller,on_sale=false,price=0,tokenURI="https://rarible.mypinata.cloud/ipfs/bafybeibu3edpaeds5w2a23m6cnwlaakvqlvz3ywx4pl2m3i4iigynqdvuy/1292.png");
+ 
+}
+
+operation sell_item(seller_pubkey: pubkey, sale_price: integer, item_id: rowid){
+	require( is_signer(seller_pubkey)) ;
+ 	val selected_item= item@{.rowid==item_id};
+ 	update selected_item (on_sale=true,price=sale_price);
+
+}
+
+operation register_user(user_pubkey: pubkey, user_name: text){
+  val new_user=create user (user_pubkey, user_name);
+  create balance (new_user, 1000000);
+
+}
+
+
+ operation buy(buyer_pubkey: pubkey, item_id: rowid) {
+ 	require( is_signer(buyer_pubkey)) ;
+	val buyer=user@{buyer_pubkey};
+  
+ 	val selected_item=item@{.rowid==item_id};
+  
+ 	require( selected_item.owner!=buyer);
+  
+ 	require( balance@{buyer}.amount >= selected_item.price );
+  
+	require( selected_item.on_sale );
+  
+  
+ 	update balance@{buyer} (amount-=selected_item.price);
+ 	update balance@{selected_item.owner} (amount+=selected_item.price);
+	update selected_item(owner=buyer,on_sale=false,price=0);
+  
+ }
+ 
+ query get_items_on_sale(){ 
+ 
+    return item@*{.on_sale==true}(id=.rowid,name=.name,creator=.creator.pubkey,owner=.owner.pubkey,price=.price,tokenURI=.tokenURI);
+
+}
+ query get_all_items() {
+ 
+    return item@*{}(id=.rowid,name=.name,creator=.creator.pubkey,owner=.owner.pubkey,on_sale=.on_sale,price=.price,tokenURI=.tokenURI);
+ }
+
+ query get_item(item_id: rowid){ 
+    return item@?{.rowid==item_id}(id=.rowid,name=.name,creator=.creator.pubkey,owner=.owner.pubkey,on_sale=.on_sale,price=.price,tokenURI=.tokenURI);
+ }
+ 
+ query get_items_by_owner(owner_pubkey: pubkey){
+ 
+    return item@*{.owner==user@{owner_pubkey}}(id=.rowid,name=.name,creator=.creator.pubkey,owner=.owner.pubkey,on_sale=.on_sale,price=.price,tokenURI=.tokenURI);
+ 
+ }
+ 
+ query get_user_by_pubkey(user_pubkey: pubkey){
+    return user@{user_pubkey}(pubKey=.pubkey,username=.username);
+ }
+ 
+ query get_balance_by_pubkey(user_pubkey : pubkey){
+    return balance@{.user.pubkey==user_pubkey}(user=.user.pubkey,balance=.amount);
+ }
+
+ 
+ 
