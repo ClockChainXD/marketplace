@@ -1,5 +1,5 @@
 import * as pcl from "postchain-client";
-
+import crypto from "crypto";
 const rest = pcl.restClient.createRestClient(
   process.env.REACT_APP_NODE_URL,
   process.env.REACT_APP_BLOCKCHAIN_RID,
@@ -27,6 +27,7 @@ export async function createTestItem(user) {
   const pubKey = Buffer.from(user.pubKey);
   const privKey = Buffer.from(user.privKey);
   const rq = gtx.newTransaction([pubKey]);
+  rq.addOperation("nop", crypto.randomBytes(32));
   rq.addOperation("create_test_item", pubKey);
   rq.sign(privKey, pubKey);
   return rq.postAndWaitConfirmation();
