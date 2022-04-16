@@ -28,7 +28,7 @@ export const ItemCard = ({item, user, handleAction}) => {
     error: "Failed to put it sale"})
   };
   return (
-    <Card style={{ width: "18rem" }} className="d-inline-block p-2">
+    <Card style={{ width: "300px" }} className="d-inline-block p-2 m-3">
       <Card.Img variant="top" src={item.tokenURI} />
       <Card.Body>
         <Card.Title> {item.name}</Card.Title>

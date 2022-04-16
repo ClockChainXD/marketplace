@@ -6,7 +6,7 @@ import {
   registerUser,
 } from "../useBlockchain";
 import { ItemCard } from "../components/Cards/ItemCard";
-import { Button, Card } from "react-bootstrap";
+import { Button, Card, CardGroup, Container } from "react-bootstrap";
 import { UserContext } from "../context/user";
 import toast, { Toaster } from "react-hot-toast";
 export const Items = () => {
@@ -83,7 +83,7 @@ export const Items = () => {
   };
 
   return (
-    <div>
+    <Container>
 
       {!isUser ? (
         <Button variant="warning" className="p-3 m-3" onClick={handleRegister}>
@@ -94,12 +94,14 @@ export const Items = () => {
           {user &&
             nftList &&
             nftList.map((item, index) => (
+            
               <ItemCard
                 key={index}
                 item={item}
                 user={user}
                 handleAction={getItems}
               />
+            
             ))}
 
           <p>You can create a test item!!</p>
@@ -113,6 +115,6 @@ export const Items = () => {
           </Button>
         </div>
       )}
-    </div>
+    </Container>
   );
 };

@@ -1,14 +1,15 @@
 
 
 entity user {
-  key pubkey;
-   username: text;
+  key account: pubkey;
+  key username: text;
 }
+
 
 
 entity item{
  name: text;
- creator: user;
+  creator: user;
  mutable owner: user;
  mutable on_sale: boolean;
  mutable price: integer;
@@ -24,19 +25,22 @@ entity balance {
 operation create_test_item(seller_pubkey: pubkey){
     require( is_signer(seller_pubkey)) ;
 	val seller=user@{seller_pubkey};
- 	create item (name="Test Item #<%d>".format((item@*{}).size()),creator=seller,owner=seller,on_sale=false,price=0,tokenURI="https://rarible.mypinata.cloud/ipfs/bafybeibu3edpaeds5w2a23m6cnwlaakvqlvz3ywx4pl2m3i4iigynqdvuy/1292.png");
+ 	create item (name="Test Item #%d".format((item@*{}).size()),creator=seller,owner=seller,on_sale=false,price=0,tokenURI="https://rarible.mypinata.cloud/ipfs/bafybeibu3edpaeds5w2a23m6cnwlaakvqlvz3ywx4pl2m3i4iigynqdvuy/1292.png");
  
 }
 
 operation sell_item(seller_pubkey: pubkey, sale_price: integer, item_id: rowid){
 	require( is_signer(seller_pubkey)) ;
- 	val selected_item= item@{.rowid==item_id};
+ 	val selected_item= item@{.rowid==item_id,.owner.pubkey==seller_pubkey};
  	update selected_item (on_sale=true,price=sale_price);
 
 }
 
+
+
+
 operation register_user(user_pubkey: pubkey){
-  val new_user=create user (user_pubkey, "Test User #<%d>".format((user@*{}).size()));
+  val new_user=create user (user_pubkey, "Test User #%d".format((user@*{}).size()));
   create balance (new_user, 1000000);
 
 }
@@ -80,6 +84,11 @@ operation register_user(user_pubkey: pubkey){
     return item@*{.owner==user@{owner_pubkey}}(id=.rowid,name=.name,creator=.creator.pubkey,owner=.owner.pubkey,on_sale=.on_sale,price=.price,tokenURI=.tokenURI);
  
  }
+ 
+ query get_users() {
+  return user @? {} ( id = user.account.id, first_name = .first_name, last_name = .last_name, age = .age);
+}
+
  
  query get_user_by_pubkey(user_pubkey: pubkey){
     return user@{user_pubkey}(pubKey=.pubkey,username=.username);

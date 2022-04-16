@@ -15,10 +15,22 @@ export const Login = () => {
   const onFormSubmit = (e) => {
     e.preventDefault();
     const formData = new FormData(e.target);
+    console.log("Formdata 0: ",formData[0]);
+    console.log("Formdata: ",formData);
+
     window.localStorage.setItem(
       "user",
       `{ "pubKey": "${formData[0]}", "privKey": "${formData[1]}" }`
     );
+
+    window.localStorage.setItem("privKey", formData[1]);
+    window.localStorage.setItem("pubKey", formData[0]);
+
+    let keyPair = { pubKey: formData[0], privKey: formData[1] };
+
+    setUser(keyPair);
+    window.location.replace(itemsURL);
+
   };
 
   const createRandomKeyPairAndLogin = (e) => {
@@ -41,17 +53,12 @@ export const Login = () => {
   return (
     <Container className="container pt-5">
       <Form className="pt-5" onSubmit={onFormSubmit}>
-        <Form.Group className="d-flex  mb-3 mt-5 p-3">
-          <Form.Label className="col-sm-2">Public Key</Form.Label>
-          <Form.Control type="text" placeholder="Enter Public Key" />
-        </Form.Group>
-
         <Form.Group className="d-flex  mb-3 mt-5 p-3  ">
-          <Form.Label className="col-sm-2">Private Key</Form.Label>
+          <Form.Label className="col-sm-2"> Password </Form.Label>
           <Form.Control
             className=""
             type="text"
-            placeholder="Enter Private Key"
+            placeholder="Enter your password"
           />
         </Form.Group>
         <ListGroup className="list-group">
