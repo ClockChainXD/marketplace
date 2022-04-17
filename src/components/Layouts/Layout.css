@@ -1,0 +1,13 @@
+.header{
+    
+position: flex;
+width: 100vw;
+height: 10vh;
+
+background: #EF8E87;
+}
+
+.section {
+    display: flex;
+    flex-direction: column;
+  }

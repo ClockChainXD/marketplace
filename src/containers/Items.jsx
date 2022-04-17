@@ -9,6 +9,7 @@ import { ItemCard } from "../components/Cards/ItemCard";
 import { Button, Card, CardGroup, Container } from "react-bootstrap";
 import { UserContext } from "../context/user";
 import toast, { Toaster } from "react-hot-toast";
+import "./Items.css"
 export const Items = () => {
   const [nftList, setNftList] = useState(undefined);
 
@@ -83,14 +84,14 @@ export const Items = () => {
   };
 
   return (
-    <Container>
+    <div className="container">
 
       {!isUser ? (
         <Button variant="warning" className="p-3 m-3" onClick={handleRegister}>
           Welcome! Please Press HERE to Register as a user
         </Button>
       ) : (
-        <div>
+        <div class="items">
           {user &&
             nftList &&
             nftList.map((item, index) => (
@@ -115,6 +116,6 @@ export const Items = () => {
           </Button>
         </div>
       )}
-    </Container>
+    </div>
   );
 };

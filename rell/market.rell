@@ -1,70 +1,156 @@
+enum status{
+ 	PASSIVE,
+ 	ON_SALE,
+ 	ON_AUCTION,
+ 	ON_TIMED_AUCTION
+}
 
+enum order_types{
+	MINT,
+	BUY,
+	SELL,
+	AUCTION,
+	TIMED_AUCTION,
+	BID,
+	OFFER,
+	UPDATE_SELL,
+	CANCEL_SELL,
+	CANCEL_AUCTION,
+	CANCEL_BID,
+	CANCEL_OFFER,
+	ACCEPT_OFFER,
+	END_AUCTION
+}
 
 entity user {
-  key account: pubkey;
-  key username: text;
+	key pubkey: pubkey;
+	key username: text;
+	mutable nickname;
+	mutable profile_image: text;
+	mutable bio: text;
+	created_at: timestamp;
+}
+
+entity likes {
+	key liker: user;
+	key item: item;
+	created_at: timestamp;
+}
+
+entity follows{
+	key follower_user: user,followed_user: user;
+	created_at: timestamp;
 }
 
 
 
 entity item{
- name: text;
-  creator: user;
- mutable owner: user;
- mutable on_sale: boolean;
- mutable price: integer;
- tokenURI: text;
+ 	name: text;
+ 	creator: user;
+	mutable owner: user;
+ 	mutable item_status: status=status.value(PASSIVE);
+ 	mutable price: integer;
+ 	tokenURI: text;
+	created_at: timestamp;
+ }
+
+ entity order{
+	index orderer: user,item: item,created_at: timestamp;
+	type: order_types;
+	deadline: timestamp=0;
+	price: integer=0;
+	minimum_bid_increase: integer=0;
+	instant_buy_price: integer=0;
  }
 
 entity balance {
   	key user;
-  	mutable amount: integer;
+  	mutable amount: integer=0;
 }
 
 
-operation create_test_item(seller_pubkey: pubkey){
-    require( is_signer(seller_pubkey)) ;
+
+
+operation create_item(seller_pubkey: pubkey,_name: text,_tokenURI: text){
+	require( is_signer(seller_pubkey)) ;
 	val seller=user@{seller_pubkey};
- 	create item (name="Test Item #%d".format((item@*{}).size()),creator=seller,owner=seller,on_sale=false,price=0,tokenURI="https://rarible.mypinata.cloud/ipfs/bafybeibu3edpaeds5w2a23m6cnwlaakvqlvz3ywx4pl2m3i4iigynqdvuy/1292.png");
- 
+	val created_item=create item(name=_name,creator=seller,owner=seller,item_status=status.value("PASSIVE"),tokenURI=_tokenURI,created_at=block.timestamp);
+	create order(orderer=seller,item=created_item,created_at=block.timestamp,type=order_types.value("MINT"));
 }
 
 operation sell_item(seller_pubkey: pubkey, sale_price: integer, item_id: rowid){
-	require( is_signer(seller_pubkey)) ;
+	require( is_signer(seller_pubkey));
+
+	val seller=user@{seller_pubkey};
+
  	val selected_item= item@{.rowid==item_id,.owner.pubkey==seller_pubkey};
- 	update selected_item (on_sale=true,price=sale_price);
+
+	create order(orderer=seller,item=selected_item,type=order_types.value("SELL"),created_at=block.timestamp);,
+
+ 	update selected_item (item_status=status.value("ON_SALE"),price=sale_price);
 
 }
 
 
 
 
-operation register_user(user_pubkey: pubkey){
-  val new_user=create user (user_pubkey, "Test User #%d".format((user@*{}).size()));
-  create balance (new_user, 1000000);
-
+operation register_user(user_pubkey: pubkey,name: text,nickname: text,profile_image: text,bio: text){
+	require( is_signer(buyer_pubkey),"You are not the signer") ;
+  	val new_user=create user (pubkey=user_pubkey,username=name,nickname=nickname,profile_image=profile_image,bio=bio);
+  	create balance (new_user, 1000000);
 }
 
 
- operation buy(buyer_pubkey: pubkey, item_id: rowid) {
- 	require( is_signer(buyer_pubkey)) ;
+operation buy(buyer_pubkey: pubkey, item_id: rowid) {
+ 	require( is_signer(buyer_pubkey),"You are not the signer") ;
+	
 	val buyer=user@{buyer_pubkey};
-  
  	val selected_item=item@{.rowid==item_id};
   
- 	require( selected_item.owner!=buyer);
+ 	require( selected_item.owner!=buyer,"You can't buy your own item");
+ 	require( balance@{buyer}.amount >= selected_item.price, "Insufficient balance" );
+	require( selected_item.item_status==status.value("ON_SALE"),"Item is not on sale");
   
- 	require( balance@{buyer}.amount >= selected_item.price );
-  
-	require( selected_item.on_sale );
-  
-  
+	create order(orderer=buyer,item=selected_item,type=order_types.value("BUY"),created_at=block.timestamp,price=selected_item.price);
+
  	update balance@{buyer} (amount-=selected_item.price);
  	update balance@{selected_item.owner} (amount+=selected_item.price);
-	update selected_item(owner=buyer,on_sale=false,price=0);
+	update selected_item(owner=buyer,status=status.value("PASSIVE"),price=0);
   
  }
- 
+
+
+operation create_auction(seller_pubkey: pubkey,item_id: rowid,price: integer,minimum_bid_increase: integer,instant_buy_price: integer){
+	require( is_signer(seller_pubkey),"You are not the signer");
+
+	val seller=user@{seller_pubkey};
+ 	val selected_item=item@{.rowid==item_id};
+
+	create order(orderer=seller,item=selected_item,type=order_types.value("AUCTION"),created_at=block.timestamp,price=price,minimum_bid_increase=minimum_bid_increase,instant_buy_price=instant_buy_price);
+	
+	update selected_item(item_status=status.value("ON_AUCTION"),price=price);
+} 
+operation create_timed_auction(seller_pubkey: pubkey,item_id: rowid,price: integer,minimum_bid_increase: integer,instant_buy_price: integer,deadline: timestamp){
+	require( is_signer(seller_pubkey),"You are not the signer");
+
+	val seller=user@{seller_pubkey};
+ 	val selected_item=item@{.rowid==item_id};
+
+	create order(orderer=seller,item=selected_item,type=order_types.value("TIMED_AUCTION"),created_at=block.timestamp,price=price,minimum_bid_increase=minimum_bid_increase,instant_buy_price=instant_buy_price,deadline=deadline);
+	
+	update selected_item(item_status=status.value("ON_TIMED_AUCTION"),price=price);
+} 
+
+operation bid(bidder_pubkey: pubkey,item_id: rowid,bid_price: integer){
+	require( is_signer(bidder_pubkey),"You are not the signer");
+	val bidder=user@{bidder_pubkey};
+	val selected_item=item@{.rowid==item_id};
+	val latest_order=order@{.item==selected_item,@sort_desc .created_at,.type=order_types.value("AUCTION")} limit 1;
+
+	require(latest_order.price)
+	create order(orderer=bidder,item=selected_item,type=order_types.value("BID"),created_at=block.timestamp,price=price);
+
+}
  query get_items_on_sale(){ 
  
     return item@*{.on_sale==true}(id=.rowid,name=.name,creator=.creator.pubkey,owner=.owner.pubkey,price=.price,tokenURI=.tokenURI);
@@ -85,9 +171,6 @@ operation register_user(user_pubkey: pubkey){
  
  }
  
- query get_users() {
-  return user @? {} ( id = user.account.id, first_name = .first_name, last_name = .last_name, age = .age);
-}
 
  
  query get_user_by_pubkey(user_pubkey: pubkey){

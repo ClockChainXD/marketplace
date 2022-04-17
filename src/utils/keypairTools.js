@@ -1,7 +1,7 @@
 // This functions are for storing the keypair of the user properly and
 //  retrieve properly  to/from local storage.
-import { createPublicKey, publicDecrypt, publicEncrypt } from "crypto";
-import { sha256, sign, verifyKeyPair } from "postchain-client/src/util";
+import { createPublicKey, privateDecrypt, publicDecrypt, publicEncrypt } from "crypto";
+import { sha256, verifyKeyPair } from "postchain-client/src/util";
 import * as wordList from "../wordList.json"
 export function convertKeyPairToProperString(keyPair) {
   const privArray = Array.from // if available
@@ -52,7 +52,7 @@ export function encryptKeyPairWithPassword(keyPair,password){
   const pubKeyOfEncryption=createPublicKey(sha256(password));
   const encryptedPublicKey=publicEncrypt(pubKeyOfEncryption,keyPair.pubKey);
 
-  const privKeyOfEncryption=createPrivateKey(sha256(password));
+  const privKeyOfEncryption=sha256(password);
   const encryptedPrivateKey=publicEncrypt(privKeyOfEncryption,keyPair.pubKey);
 
 
