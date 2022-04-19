@@ -4,14 +4,18 @@ import { Card } from "react-bootstrap";
 import { UserContext } from "../../context/user";
 import { buy, sellItem } from "../../useBlockchain";
 import toast from "react-hot-toast";
-
+import "./ItemCard.css";
 export const ItemCard = ({item, user, handleAction}) => {
+  
   const handleSell = (e) => {
     e.preventDefault();
     toast.promise(sellItem(user, 20, item.id), {
       loading: "Putting item to the sale ",
-      success: () => {
-        handleAction();
+      success: () => 
+      {
+        
+        // handleAction();
+        
         toast.success("You successfully put it to sale");
       },
       error: "Failed to put it sale",
@@ -28,8 +32,8 @@ export const ItemCard = ({item, user, handleAction}) => {
     error: "Failed to put it sale"})
   };
   return (
-    <Card style={{ width: "300px" }} className="d-inline-block p-2 m-3">
-      <Card.Img variant="top" src={item.tokenURI} />
+    <Card className="item-card">
+      <Card.Img className="card-image" variant="bottom" src={item.tokenURI} />
       <Card.Body>
         <Card.Title> {item.name}</Card.Title>
 

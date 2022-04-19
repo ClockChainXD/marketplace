@@ -1,11 +1,12 @@
 import React, { useContext } from 'react';
 import { Nav } from 'react-bootstrap';
 import { UserContext } from '../../context/user';
+import "./Layout.css"
 export const Layout = ({ children }) => {
 
   const [user,setUser]=useContext(UserContext);
 return(
-<div className='container'>
+<div className='section'>
 <Nav
   activeKey="/items"
 >  

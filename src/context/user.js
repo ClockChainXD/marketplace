@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useState, useEffect } from "react";
 import { getUserByPubKey } from "../useBlockchain";
 import { retrieveKeyPairFromStorage } from "../utils/keypairTools";
 
@@ -13,6 +13,7 @@ export const UserContextProvider = ({ children }) => {
     privKey: new Uint8Array(0),
   });
 
+ 
   // Checking localStorage onMount to see if the user logged-in and saving it to context
   useEffect(() => {
     const pub = window.localStorage.getItem("pubKey");

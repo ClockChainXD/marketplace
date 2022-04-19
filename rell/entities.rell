@@ -1,0 +1,74 @@
+module;
+enum status{
+ 	PASSIVE,
+ 	ON_SALE,
+ 	ON_AUCTION,
+ 	ON_TIMED_AUCTION
+}
+
+enum order_types{
+	MINT,
+	BUY,
+	SELL,
+	AUCTION,
+	TIMED_AUCTION,
+	BID,
+	OFFER,
+	UPDATE_SELL,
+	CANCEL_SELL,
+	CANCEL_AUCTION,
+	CANCEL_BID,
+	CANCEL_OFFER,
+	ACCEPT_OFFER,
+	END_AUCTION
+}
+
+entity user {
+	key pubkey: pubkey;
+	key username: text;
+	mutable nickname: text;
+	mutable profile_image: text;
+	mutable bio: text;
+	created_at: timestamp;
+}
+
+entity likes {
+	key liker: user;
+	key item: item;
+	created_at: timestamp;
+}
+
+entity follows{
+	key follower_user: user,followed_user: user;
+	created_at: timestamp;
+}
+
+
+
+entity item{
+ 	name: text;
+	description: text;
+ 	creator: user;
+	mutable owner: user;
+ 	mutable item_status: status=status.value(PASSIVE);
+ 	mutable price: integer;
+ 	tokenURI: text;
+	created_at: timestamp;
+	mutable active_order: order;
+	mutable active_bid: order=null;
+ }
+
+ entity order{
+	index orderer: user,item: item,created_at: timestamp;
+	type: order_types;
+	deadline: timestamp=0;
+	price: integer=0;
+	minimum_bid_increase: integer=0;
+	instant_buy_price: integer=0;
+	mutable cancelled: boolean=false;
+ }
+
+entity balance {
+  	key user;
+  	mutable amount: integer=0;
+}

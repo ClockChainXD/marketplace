@@ -1,102 +1,231 @@
+import entities;
 
 
-entity user {
-  key account: pubkey;
-  key username: text;
+function latest_active_order_of_item_with_type(item: item,order_type: order_types){
+		val latest_order=entities.order@*{.item==selected_item,.cancelled==false,@sort_desc .created_at,.type==order_type} limit 1;
+	return latest_order;
 }
 
 
 
-entity item{
- name: text;
-  creator: user;
- mutable owner: user;
- mutable on_sale: boolean;
- mutable price: integer;
- tokenURI: text;
- }
-
-entity balance {
-  	key user;
-  	mutable amount: integer;
-}
 
 
-operation create_test_item(seller_pubkey: pubkey){
-    require( is_signer(seller_pubkey)) ;
-	val seller=user@{seller_pubkey};
- 	create item (name="Test Item #%d".format((item@*{}).size()),creator=seller,owner=seller,on_sale=false,price=0,tokenURI="https://rarible.mypinata.cloud/ipfs/bafybeibu3edpaeds5w2a23m6cnwlaakvqlvz3ywx4pl2m3i4iigynqdvuy/1292.png");
- 
+operation create_item(seller_pubkey: pubkey,name: text,_tokenURI: text,description: text){
+	require( is_signer(seller_pubkey)) ;
+	val seller=entities.user@{seller_pubkey};
+	val created_item=create entities.item(name=name,creator=seller,owner=seller,item_status=entities.status.value("PASSIVE"),tokenURI=_tokenURI,created_at=block.timestamp,active_order=null,description=description);
+	val mint_order=create entities.order(orderer=seller,item=created_item,created_at=block.timestamp,type=order_types.value("MINT"));
+	update created_item(active_order=mint_order);
 }
 
 operation sell_item(seller_pubkey: pubkey, sale_price: integer, item_id: rowid){
-	require( is_signer(seller_pubkey)) ;
- 	val selected_item= item@{.rowid==item_id,.owner.pubkey==seller_pubkey};
- 	update selected_item (on_sale=true,price=sale_price);
+	require( is_signer(seller_pubkey));
+
+	val seller=entities.user@{seller_pubkey};
+
+ 	val selected_item= entities.item@{.rowid==item_id,.owner.pubkey==seller_pubkey};
+
+	create entities.order(orderer=seller,item=selected_item,type=order_types.value("SELL"),created_at=block.timestamp);,
+
+ 	update selected_item (item_status=entities.status.value("ON_SALE"),price=sale_price);
 
 }
 
 
 
 
-operation register_user(user_pubkey: pubkey){
-  val new_user=create user (user_pubkey, "Test User #%d".format((user@*{}).size()));
-  create balance (new_user, 1000000);
+operation buy(buyer_pubkey: pubkey, item_id: rowid) {
+ 	require( is_signer(buyer_pubkey),"You are not the signer") ;
+	
+	val buyer=entities.user@{buyer_pubkey};
+ 	val selected_item=entities.item@{.rowid==item_id};
+  
+ 	require( selected_item.owner!=buyer,"You can't buy your own item");
+ 	require( entities.balance@{buyer}.amount >= selected_item.price, "Insufficient balance" );
+	require( selected_item.item_status==entities.status.value("ON_SALE"),"Item is not on sale");
+  
+	val buy_order=create entities.order(orderer=buyer,item=selected_item,type=order_types.value("BUY"),created_at=block.timestamp,price=selected_item.price);
+
+ 	update entities.balance@{buyer} (amount-=selected_item.price);
+ 	update entities.balance@{selected_item.owner} (amount+=selected_item.price);
+	update selected_item(owner=buyer,status=entities.status.value("PASSIVE"),price=0,active_order=buy_order);
+  
+ }
+
+ operation instant_buy(buyer_pubkey: pubkey, item_id: rowid){
+	require( is_signer(buyer_pubkey),"You are not the signer") ;
+	
+	val buyer=entities.user@{buyer_pubkey};
+ 	val selected_item=entities.item@{.rowid==item_id};
+	val instant_price=selected_item.active_order.instant_buy_price;
+ 	require( selected_item.owner!=buyer,"You can't buy your own item");
+ 	require( entities.balance@{buyer}.amount >= instant_price, "Insufficient balance" );
+	require( selected_item.item_status==entities.status.value("AUCTION") or entities.status.value("TIMED_AUCTION"),"Item is not on sale");
+	require(instant_price>0,"There is no actual instant buy price");
+  
+	val buy_order=create entities.order(orderer=buyer,item=selected_item,type=order_types.value("BUY"),created_at=block.timestamp,price=selected_item.price);
+
+ 	update entities.balance@{buyer} (amount-=selected_item.price);
+ 	update entities.balance@{selected_item.owner} (amount+=instant_price);
+	update selected_item(owner=buyer,status=entities.status.value("PASSIVE"),price=0,active_order=buy_order);
+ }
+
+
+operation create_auction(seller_pubkey: pubkey,item_id: rowid,price: integer,minimum_bid_increase: integer,instant_buy_price: integer){
+	require( is_signer(seller_pubkey),"You are not the signer");
+
+	val seller=entities.user@{seller_pubkey};
+ 	val selected_item=entities.item@{.rowid==item_id};
+	require(selected_item.item_status==entities.status.value("PASSIVE"), "Item is on sale already");
+
+	val auction_order=create entities.order(orderer=seller,item=selected_item,type=order_types.value("AUCTION"),created_at=block.timestamp,price=price,minimum_bid_increase=minimum_bid_increase,instant_buy_price=instant_buy_price);
+	
+	update selected_item(item_status=entities.status.value("ON_AUCTION"),price=price,active_order=auction_order);
+} 
+operation create_timed_auction(seller_pubkey: pubkey,item_id: rowid,price: integer,minimum_bid_increase: integer,instant_buy_price: integer,deadline: timestamp){
+	require( is_signer(seller_pubkey),"You are not the signer");
+
+	val seller=entities.user@{seller_pubkey};
+ 	val selected_item=entities.item@{.rowid==item_id};
+	require(selected_item.item_status==entities.status.value("PASSIVE"),  "Item is on sale already");
+
+	val timed_auction_order=create entities.order(orderer=seller,item=selected_item,type=order_types.value("TIMED_AUCTION"),created_at=block.timestamp,price=price,minimum_bid_increase=minimum_bid_increase,instant_buy_price=instant_buy_price,deadline=deadline);
+	
+	update selected_item(item_status=entities.status.value("ON_TIMED_AUCTION") ,price=price ,active_order=timed_auction_order);
+} 
+
+operation bid(bidder_pubkey: pubkey,item_id: rowid,bid_price: integer){
+	require( is_signer(bidder_pubkey),"You are not the signer");
+
+	val bidder=entities.user@{bidder_pubkey};
+
+	val selected_item=entities.item@{.rowid==item_id};
+	require(selected_item.item_status==entities.status.value("ON_AUCTION"), "Item is not on an auction");
+
+	val latest_order=latest_active_order_of_item_with_type(selected_item,order_types.value("AUCTION");
+	val minBid=selected_item.price*(100+latest_order.minimum_bid_increase)/100;
+
+	require(bid_price>=minBid,"You should bid higher");
+ 	
+	// We look if the bidder bidded earlier to the same auction
+	val old_bid_of_user=entities.order@?{.orderer=bidder,.item==selected_item,.cancelled==false,.created_at>latest_order.created_at,.type==order_types.value("BID")};
+	// I could make it not require to cancel but I could do it automatically here and give the amount immediately, but unfortunately I don't have the time for creating ui features like bid higher modal.
+	require(empty(old_bid_of_user),"You have already bidded, cancel it to bid again");
+	require( entities.balance@{bidder}.amount >= minBid, "Insufficient balance" );
+
+	val bid_order=create entities.order(orderer=bidder,item=selected_item,type=order_types.value("BID"),created_at=block.timestamp,price=bid_price);
+	
+	update selected_item(price=bid_price,active_bid=bid_order);
+ 	update entities.balance@{bidder} (amount-=bid_price);
+	
+}
+
+operation offer(offerer_pubkey: pubkey,item_id: rowid,offer_price: integer){
+	require( is_signer(offerer_pubkey),"You are not the signer");
+	val offerer=entities.user@{offerer_pubkey};
+	val selected_item=entities.item@{.rowid==item_id};
+
+	require( entities.balance@{bidder}.amount >= offer_price, "Insufficient balance" );
+ 	update entities.balance@{offerer} (amount-=offer_price);
+
+	create entities.order(orderer=offerer,item=selected_item,type=order_types.value("OFFER"),price=offer_price,created_at=block.timestamp);
 
 }
 
+operation cancel_order(orderer_pubkey: pubkey,order_id: rowid){
+	require( is_signer(orderer_pubkey),"You are not the signer");
+	val orderer=entities.user@{orderer_pubkey};
+	val selected_order=entities.order@{.rowid==order_id};
 
- operation buy(buyer_pubkey: pubkey, item_id: rowid) {
- 	require( is_signer(buyer_pubkey)) ;
-	val buyer=user@{buyer_pubkey};
-  
- 	val selected_item=item@{.rowid==item_id};
-  
- 	require( selected_item.owner!=buyer);
-  
- 	require( balance@{buyer}.amount >= selected_item.price );
-  
-	require( selected_item.on_sale );
-  
-  
- 	update balance@{buyer} (amount-=selected_item.price);
- 	update balance@{selected_item.owner} (amount+=selected_item.price);
-	update selected_item(owner=buyer,on_sale=false,price=0);
-  
- }
- 
- query get_items_on_sale(){ 
- 
-    return item@*{.on_sale==true}(id=.rowid,name=.name,creator=.creator.pubkey,owner=.owner.pubkey,price=.price,tokenURI=.tokenURI);
+	require(selected_order.orderer==orderer,"You are not the orderer of the order");	
+	require(selected_order.type==order_types.value("SELL") or order_types.value("BID") or order_types.value("OFFER"),"Can't cancel selected order type");
+	require(selected_order.cancelled!=true,"Order already cancelled");
 
-}
- query get_all_items() {
- 
-    return item@*{}(id=.rowid,name=.name,creator=.creator.pubkey,owner=.owner.pubkey,on_sale=.on_sale,price=.price,tokenURI=.tokenURI);
- }
+	update selected_order(cancelled=true);
+	val item_of_order=selected_order.item;
+	if(selected_order.type==order_types.value("SELL")){
+		require(item_of_order.item_status==entities.status.value("ON_SALE"),"Item not on sale");
+	 	update selected_order(cancelled=true);		
+		val cancel_order=create entities.order(orderer=orderer,type=order_types.value("CANCEL_SALE"),item=item_of_order,created_at=block.timestamp);
+		update item_of_order(item_status=entities.status.value("PASSIVE"),active_order=cancel_order);
+	}
+	else if(selected_order.type==order_types.value("BID")){
+		require(item_of_order.item_status==entities.status.value("ON_AUCTION") or entities.status.value("ON_TIMED_AUCTION"));
+		update selected_order(cancelled=true);
+		val latest_bid=latest_active_order_of_item_with_type(item_of_order,order_types.value("BID");
 
- query get_item(item_id: rowid){ 
-    return item@?{.rowid==item_id}(id=.rowid,name=.name,creator=.creator.pubkey,owner=.owner.pubkey,on_sale=.on_sale,price=.price,tokenURI=.tokenURI);
- }
- 
- query get_items_by_owner(owner_pubkey: pubkey){
- 
-    return item@*{.owner==user@{owner_pubkey}}(id=.rowid,name=.name,creator=.creator.pubkey,owner=.owner.pubkey,on_sale=.on_sale,price=.price,tokenURI=.tokenURI);
- 
- }
- 
- query get_users() {
-  return user @? {} ( id = user.account.id, first_name = .first_name, last_name = .last_name, age = .age);
+		if(latest_bid.created_at<selected_order.created_at){
+			update item_of_order(price=latest_bid.price,active_bid=latest_bid);
+		}
+		val cancel_order=create entities.order(orderer=orderer,type=order_types.value("CANCEL_BID"),item=item_of_order,created_at=block.timestamp);
+
+		update entities.balance@{user==orderer}(.amount+=selected_order.price);	
+	}
+	else(selected_order.type==order_types.value("OFFER")){
+		update selected_order(cancelled=true);
+		update entities.balance@{user==orderer}(.amount+=selected_order.price);	
+		val cancel_order=create entities.order(orderer=orderer,type=order_types.value("CANCEL_OFFER"),item=item_of_order,created_at=block.timestamp);
+	}
 }
 
+operation accept_offer(offer_id: rowid,accepter_pubkey: pubkey){
+	require( is_signer(accepter_pubkey),"You are not the signer");
+
+	val accepter=entities.user@{accepter_pubkey};
+	val selected_order=entities.order@{.rowid==offer_id,.type==order_types.value("OFFER")};
+	val selected_item=selected_order.item;
+
+	require(selected_item.owner==accepter,"You are not the owner of item");
+	require(selected_order.cancelled==false,"This offer is cancelled");
+	require(selected_item.status==entities.status.value("PASSIVE") or entities.status.value("ON_SALE"));
+
+	val accept_offer_order= create entities.order(orderer=accepter,item=selected_order.item,type=order_types.value("ACCEPT_OFFER"),created_at=block.timestamp,price=selected_order.price);
+
+	update selected_item(owner=selected_order.orderer,status=entities.status.value("PASSIVE"),price=0,active_order=accept_offer_order);
+	update entities.balance@{user==accepter}(.amount+=selected_order.price);
+}
+
+operation end_auction(bid_id: rowid,accepter_pubkey: pubkey){
+	require( is_signer(accepter_pubkey),"You are not the signer");
+	val accepter=entities.user@{accepter_pubkey};
+	val selected_order=entities.order@{.rowid==offer_id,.type==order_types.value("BID")};
+	val selected_item=selected_order.item;
+	val auction_order=selected_item.active_order;
+
+	require(selected_item.owner==accepter,"You are not the owner of item");
+	require(selected_order.cancelled==false,"This bid is cancelled");
+	require(selected_item.status==entities.status.value("AUCTION") or entities.status.value("TIMED_AUCTION"),"The item is not on an auction");
+
+	val accept_offer_order= create entities.order(orderer=accepter,item=selected_item,type=order_types.value("END_AUCTION"),created_at=block.timestamp,price=selected_order.price);
+	update selected_item(owner=selected_order.orderer,status=entities.status.value("PASSIVE"),price=0,active_order=accept_offer_order);
+	update entities.balance@{user==accepter}(.amount+=selected_order.price);
+	val left_bids=entities.order@*{.item==selected_item,.cancelled==false,.created_at>=auction_order.created_at,.type==order_types.value("BID"),.rowid!=selected_order.rowid};
+
+	for(bid in left_bids) //Refunding left bids
+	{
+		if(bid.cancelled==false) //A little bit waste if block but I don't trust the loop to be consistent rn 
+		{
+			val bidder=bid.orderer;
+	 		update entities.balance@{user==bidder}(.amount+=bid.price);
+	 		update bid(cancelled=true);
+		}
+	}
+}
+
+operation update_price(item_id: rowid,owner_pubkey: pubkey,new_price: integer){
+	require( is_signer(owner_pubkey),"You are not the signer");
+	val owner=entities.user@{owner_pubkey};
+	val selected_item=entities.item@{.owner==owner,.rowid==item_id};
+	require(exists(selected_item),"Item does not exist OR You are not the owner");
+	require(selected_item.item_status==entities.entities.status.value("ON_SALE"));
+	update selected_item(price=new_price);
+	create entities.order(orderer=owner,item=selected_item,type=entities.order_types.value("UPDATE_PRICE"));
+}
+
+
+
+
  
- query get_user_by_pubkey(user_pubkey: pubkey){
-    return user@{user_pubkey}(pubKey=.pubkey,username=.username);
- }
- 
- query get_balance_by_pubkey(user_pubkey : pubkey){
-    return balance@{.user.pubkey==user_pubkey}(user=.user.pubkey,balance=.amount);
- }
 
  
  
