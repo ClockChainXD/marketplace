@@ -59,14 +59,14 @@ operation buy(buyer_pubkey: pubkey, item_id: rowid) {
  	val selected_item=entities.item@{.rowid==item_id};
 	val instant_price=selected_item.active_order.instant_buy_price;
  	require( selected_item.owner!=buyer,"You can't buy your own item");
- 	require( entities.balance@{buyer}.amount >= selected_item.active_order.instant_buy_price, "Insufficient balance" );
+ 	require( entities.balance@{buyer}.amount >= instant_price, "Insufficient balance" );
 	require( selected_item.item_status==entities.status.value("AUCTION") or entities.status.value("TIMED_AUCTION"),"Item is not on sale");
-	require(selected_item.active_order.instant_buy_price>0,"There is no actual instant buy price");
+	require(instant_price>0,"There is no actual instant buy price");
   
 	val buy_order=create entities.order(orderer=buyer,item=selected_item,type=order_types.value("BUY"),created_at=block.timestamp,price=selected_item.price);
 
  	update entities.balance@{buyer} (amount-=selected_item.price);
- 	update entities.balance@{selected_item.owner} (amount+=selected_item.active_order.instant_buy_price);
+ 	update entities.balance@{selected_item.owner} (amount+=instant_price);
 	update selected_item(owner=buyer,status=entities.status.value("PASSIVE"),price=0,active_order=buy_order);
  }
 
