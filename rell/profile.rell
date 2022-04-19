@@ -1,0 +1,51 @@
+import entities;
+operation register_user(user_pubkey: pubkey,name: text,nickname: text,profile_image: text,bio: text){
+	require( is_signer(buyer_pubkey),"You are not the signer") ;
+  	val new_user=create entities.user (pubkey=user_pubkey,username=name,nickname=nickname,profile_image=profile_image,bio=bio);
+  	create entities.balance (new_user, 1000000);
+}
+
+operation change_nickname(user_pubkey: pubkey,nickname: text){
+	require(is_signer(user_pubkey),"You are not the signer");
+	val _user=user@{user_pubkey};
+	require(exists(_user),"User not exists");
+	update _user(nickname);
+}
+
+operation change_profile_image(user_pubkey: pubkey,profile_image: text){
+	require(is_signer(user_pubkey),"You are not the signer");
+	val _user=user@{user_pubkey};
+	require(exists(_user),"User not exists");
+	update _user(profile_image);
+}
+
+operation change_bio(user_pubkey: pubkey,bio: text){
+	require(is_signer(user_pubkey),"You are not the signer");
+	val _user=user@{user_pubkey};
+	require(exists(_user),"User not exists");
+	update _user(bio);
+}
+
+operation follow_or_unfollow(target_user: pubkey,follower_user: pubkey){
+	val target=entities.user@{target_user};
+	val follower=entities.user@{follower_user};
+	val follow_record=entities.follows@?{follower_user==follower,followed_user=target};
+	if(empty(follow_record)){
+		create entities.follows(follower_user=follower,followed_user=target,created_at=block.timestamp);
+	}
+	else{
+		delete follow_record;
+	}
+}
+
+operation like_or_unlike(target_item: rowid,liker_user: pubkey){
+	val target=entities.item@{.rowid==target_item};
+	val liker=entities.user@{liker_user};
+	val like_record=entities.likes@?{liker==liker,item==target};
+	if(empty(like_record)){
+		create entities.likes(liker=liker,item=target,created_at=block.timestamp);
+	}
+	else{
+		delete like_record;
+	}
+}
