@@ -29,7 +29,7 @@ operation change_bio(user_pubkey: pubkey,bio: text){
 operation follow_or_unfollow(target_user: pubkey,follower_user: pubkey){
 	val target=entities.user@{target_user};
 	val follower=entities.user@{follower_user};
-	val follow_record=entities.follows@?{follower_user==follower,followed_user=target};
+	val follow_record=entities.follows@?{.follower_user==follower,.followed_user==target};
 	if(empty(follow_record)){
 		create entities.follows(follower_user=follower,followed_user=target,created_at=block.timestamp);
 	}
@@ -41,7 +41,7 @@ operation follow_or_unfollow(target_user: pubkey,follower_user: pubkey){
 operation like_or_unlike(target_item: rowid,liker_user: pubkey){
 	val target=entities.item@{.rowid==target_item};
 	val liker=entities.user@{liker_user};
-	val like_record=entities.likes@?{liker==liker,item==target};
+	val like_record=entities.likes@?{.liker==liker,.item==target};
 	if(empty(like_record)){
 		create entities.likes(liker=liker,item=target,created_at=block.timestamp);
 	}

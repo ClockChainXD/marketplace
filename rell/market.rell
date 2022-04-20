@@ -108,7 +108,7 @@ operation bid(bidder_pubkey: pubkey,item_id: rowid,bid_price: integer){
 	require(bid_price>=minBid,"You should bid higher");
  	
 	// We look if the bidder bidded earlier to the same auction
-	val old_bid_of_user=entities.order@?{.orderer=bidder,.item==selected_item,.cancelled==false,.created_at>latest_order.created_at,.type==order_types.value("BID")};
+	val old_bid_of_user=entities.order@?{.orderer==bidder,.item==selected_item,.cancelled==false,.created_at>=latest_order.created_at,.type==order_types.value("BID")};
 	// I could make it not require to cancel but I could do it automatically here and give the amount immediately, but unfortunately I don't have the time for creating ui features like bid higher modal.
 	require(empty(old_bid_of_user),"You have already bidded, cancel it to bid again");
 	require( entities.balance@{bidder}.amount >= minBid, "Insufficient balance" );
@@ -159,11 +159,11 @@ operation cancel_order(orderer_pubkey: pubkey,order_id: rowid){
 		}
 		val cancel_order=create entities.order(orderer=orderer,type=order_types.value("CANCEL_BID"),item=item_of_order,created_at=block.timestamp);
 
-		update entities.balance@{user==orderer}(.amount+=selected_order.price);	
+		update entities.balance@{.user==orderer}(.amount+=selected_order.price);	
 	}
 	else(selected_order.type==order_types.value("OFFER")){
 		update selected_order(cancelled=true);
-		update entities.balance@{user==orderer}(.amount+=selected_order.price);	
+		update entities.balance@{.user==orderer}(.amount+=selected_order.price);	
 		val cancel_order=create entities.order(orderer=orderer,type=order_types.value("CANCEL_OFFER"),item=item_of_order,created_at=block.timestamp);
 	}
 }
