@@ -132,6 +132,7 @@ operation offer(offerer_pubkey: pubkey,item_id: rowid,offer_price: integer){
 
 }
 
+//Cancelling one of three order Cancelling SELL order OR  Cancelling BID order OR Cancelling OFFER order.
 operation cancel_order(orderer_pubkey: pubkey,order_id: rowid){
 	require( is_signer(orderer_pubkey),"You are not the signer");
 	val orderer=entities.user@{orderer_pubkey};
