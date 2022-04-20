@@ -26,6 +26,7 @@ export function retrieveKeyPairFromStorage(pub, priv) {
   return [pubKey, privKey];
 }
 
+// Creating And Encrypt KeyPair Step 1:
 export function createRandomMnemonicWithPassword(password){
 
   let i=0;
@@ -39,6 +40,7 @@ export function createRandomMnemonicWithPassword(password){
   return mnemonic;
 }
 
+// Creating And Encrypt KeyPair Step 2:
 export function createKeyPairWithMnemonic(mnemonic){
 
   let privateKey=sha256(mnemonic);
@@ -47,6 +49,7 @@ export function createKeyPairWithMnemonic(mnemonic){
   return keyPair;
 }
 
+// Creating And Encrypt KeyPair Step 3:
 export function encryptKeyPairWithPassword(keyPair,password){
 
   const pubKeyOfEncryption=createPublicKey(sha256(password));
@@ -60,6 +63,7 @@ export function encryptKeyPairWithPassword(keyPair,password){
 
 }
 
+// For Decryption Of The Local Stored KeyPair
 export function decryptKeyPairWithPassword(password,encryptedKeyPair){
 
 const decryptedPubKey=privateDecrypt(sha256(password),encryptedKeyPair.pubKey)
