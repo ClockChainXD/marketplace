@@ -2,7 +2,7 @@ import entities;
 
 
 function latest_active_order_of_item_with_type(item: item,order_type: order_types){
-		val latest_order=entities.order@*{.item==selected_item,.cancelled==false,@sort_desc .created_at,.type==order_type} limit 1;
+	val latest_order=entities.order@*{.item==selected_item,.cancelled==false,@sort_desc .created_at,.type==order_type} limit 1;
 	return latest_order;
 }
 
@@ -22,11 +22,9 @@ operation sell_item(seller_pubkey: pubkey, sale_price: integer, item_id: rowid){
 	require( is_signer(seller_pubkey));
 
 	val seller=entities.user@{seller_pubkey};
-
  	val selected_item= entities.item@{.rowid==item_id,.owner.pubkey==seller_pubkey};
 
 	create entities.order(orderer=seller,item=selected_item,type=order_types.value("SELL"),created_at=block.timestamp);,
-
  	update selected_item (item_status=entities.status.value("ON_SALE"),price=sale_price);
 
 }
